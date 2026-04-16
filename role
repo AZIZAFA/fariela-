@@ -1,0 +1,126 @@
+// ============================================================
+// Page 50105 - Lens Manager Role Center
+// ============================================================
+page 50105 "Lens Manager Role Center"
+{
+    Caption = 'Менеджер по линзам';
+    PageType = RoleCenter;
+    ApplicationArea = All;
+    UsageCategory = None;
+
+    layout
+    {
+        area(RoleCenter)
+        {
+            group(Orders)
+            {
+                Caption = 'Заказы';
+                part(ActiveOrders; "Lens Order List")
+                {
+                    ApplicationArea = All;
+                    Caption = 'Активные заказы';
+                    SubPageView = where(Status = filter(<> Shipped & <> Cancelled));
+                }
+            }
+        }
+    }
+
+    actions
+    {
+        area(Sections)
+        {
+            group(LensManagement)
+            {
+                Caption = 'Управление линзами';
+                action(LensProducts)
+                {
+                    Caption = 'Каталог линз';
+                    RunObject = Page "Lens Product List";
+                    ApplicationArea = All;
+                }
+                action(LensOrders)
+                {
+                    Caption = 'Заказы';
+                    RunObject = Page "Lens Order List";
+                    ApplicationArea = All;
+                }
+                action(QualityChecks)
+                {
+                    Caption = 'Контроль качества';
+                    RunObject = Page "Lens Quality Check List";
+                    ApplicationArea = All;
+                }
+            }
+        }
+    }
+}
+
+// ============================================================
+// Page Extension - Customer Card Extension
+// (Добавляем поле "Пациент офтальмолога" к карточке клиента)
+// ============================================================
+pageextension 50100 "Customer Card Lens Ext." extends "Customer Card"
+{
+    layout
+    {
+        addafter(General)
+        {
+            group(LensInfo)
+            {
+                Caption = 'Офтальмология';
+                field("Is Ophthalmology Patient"; Rec."Is Ophthalmology Patient")
+                {
+                    ApplicationArea = All;
+                    Caption = 'Является пациентом';
+                }
+                field("Preferred Ophthalmologist"; Rec."Preferred Ophthalmologist")
+                {
+                    ApplicationArea = All;
+                    Caption = 'Лечащий врач';
+                }
+            }
+        }
+    }
+
+    actions
+    {
+        addafter(Action1)
+        {
+            action(ViewLensOrders)
+            {
+                Caption = 'Заказы линз';
+                Image = Order;
+                ApplicationArea = All;
+                trigger OnAction()
+                var
+                    LensOrders: Page "Lens Order List";
+                    LensOrder: Record "Lens Order";
+                begin
+                    LensOrder.SetRange("Customer No.", Rec."No.");
+                    LensOrders.SetTableView(LensOrder);
+                    LensOrders.Run();
+                end;
+            }
+        }
+    }
+}
+
+// ============================================================
+// Table Extension - Customer (расширение таблицы клиентов)
+// ============================================================
+tableextension 50100 "Customer Lens Ext." extends Customer
+{
+    fields
+    {
+        field(50100; "Is Ophthalmology Patient"; Boolean)
+        {
+            Caption = 'Является пациентом офтальмолога';
+            DataClassification = CustomerContent;
+        }
+        field(50101; "Preferred Ophthalmologist"; Text[100])
+        {
+            Caption = 'Лечащий врач-офтальмолог';
+            DataClassification = CustomerContent;
+        }
+    }
+}
