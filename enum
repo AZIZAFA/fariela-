@@ -1,0 +1,71 @@
+// ============================================================
+// Enum 50100 - Lens Type
+// ============================================================
+enum 50100 "Lens Type"
+{
+    Extensible = true;
+
+    value(0; " ") { Caption = ' '; }
+    value(1; "Soft") { Caption = 'Мягкая'; }
+    value(2; "RGP") { Caption = 'Жёсткая газопроницаемая'; }
+    value(3; "Hybrid") { Caption = 'Гибридная'; }
+    value(4; "Scleral") { Caption = 'Склеральная'; }
+    value(5; "Orthokeratology") { Caption = 'Ортокератологическая'; }
+}
+
+// ============================================================
+// Enum 50101 - Lens Material
+// ============================================================
+enum 50101 "Lens Material"
+{
+    Extensible = true;
+
+    value(0; " ") { Caption = ' '; }
+    value(1; "Silicone Hydrogel") { Caption = 'Силикон-гидрогель'; }
+    value(2; "Hydrogel") { Caption = 'Гидрогель'; }
+    value(3; "PMMA") { Caption = 'ПММА (акрил)'; }
+    value(4; "Fluorosilicone") { Caption = 'Фторсиликон'; }
+}
+
+// ============================================================
+// Enum 50102 - Lens Product Status
+// ============================================================
+enum 50102 "Lens Product Status"
+{
+    Extensible = true;
+
+    value(0; "Development") { Caption = 'В разработке'; }
+    value(1; "Testing") { Caption = 'На тестировании'; }
+    value(2; "Active") { Caption = 'Активный'; }
+    value(3; "Discontinued") { Caption = 'Снят с производства'; }
+}
+
+// ============================================================
+// Enum 50103 - Lens Wear Duration
+// ============================================================
+enum 50103 "Lens Wear Duration"
+{
+    Extensible = true;
+
+    value(0; " ") { Caption = ' '; }
+    value(1; "Daily") { Caption = 'Однодневные'; }
+    value(2; "Bi-Weekly") { Caption = 'Двухнедельные'; }
+    value(3; "Monthly") { Caption = 'Месячные'; }
+    value(4; "Quarterly") { Caption = 'Квартальные'; }
+    value(5; "Annual") { Caption = 'Годовые'; }
+}
+
+// ============================================================
+// Enum 50104 - Lens Order Status
+// ============================================================
+enum 50104 "Lens Order Status"
+{
+    Extensible = true;
+
+    value(0; "New") { Caption = 'Новый'; }
+    value(1; "In Production") { Caption = 'В производстве'; }
+    value(2; "Quality Check") { Caption = 'Контроль качества'; }
+    value(3; "Ready") { Caption = 'Готов к отгрузке'; }
+    value(4; "Shipped") { Caption = 'Отгружен'; }
+    value(5; "Cancelled") { Caption = 'Отменён'; }
+}
