@@ -1,0 +1,114 @@
+// ============================================================
+// Table 50100 - Lens Product (Каталог глазных линз)
+// ============================================================
+table 50100 "Lens Product"
+{
+    Caption = 'Lens Product';
+    DataClassification = CustomerContent;
+
+    fields
+    {
+        field(1; "No."; Code[20])
+        {
+            Caption = 'No.';
+            NotBlank = true;
+        }
+        field(2; "Description"; Text[100])
+        {
+            Caption = 'Описание линзы';
+        }
+        field(3; "Lens Type"; Enum "Lens Type")
+        {
+            Caption = 'Тип линзы';
+        }
+        field(4; "Material"; Enum "Lens Material")
+        {
+            Caption = 'Материал';
+        }
+        field(5; "Diameter (mm)"; Decimal)
+        {
+            Caption = 'Диаметр (мм)';
+            DecimalPlaces = 1 : 2;
+            MinValue = 0;
+        }
+        field(6; "Base Curve (mm)"; Decimal)
+        {
+            Caption = 'Базовая кривизна (мм)';
+            DecimalPlaces = 1 : 2;
+        }
+        field(7; "Optical Power Min"; Decimal)
+        {
+            Caption = 'Мин. оптическая сила (D)';
+            DecimalPlaces = 2 : 2;
+        }
+        field(8; "Optical Power Max"; Decimal)
+        {
+            Caption = 'Макс. оптическая сила (D)';
+            DecimalPlaces = 2 : 2;
+        }
+        field(9; "UV Protection"; Boolean)
+        {
+            Caption = 'УФ-защита';
+        }
+        field(10; "Water Content (%)"; Decimal)
+        {
+            Caption = 'Водное содержание (%)';
+            DecimalPlaces = 0 : 1;
+            MaxValue = 100;
+            MinValue = 0;
+        }
+        field(11; "Oxygen Permeability (Dk)"; Decimal)
+        {
+            Caption = 'Кислородопроницаемость (Dk)';
+            DecimalPlaces = 0 : 1;
+        }
+        field(12; "Unit Price"; Decimal)
+        {
+            Caption = 'Цена за единицу';
+            DecimalPlaces = 2 : 2;
+            MinValue = 0;
+        }
+        field(13; "ISO Certification"; Text[50])
+        {
+            Caption = 'ISO сертификат';
+        }
+        field(14; "Status"; Enum "Lens Product Status")
+        {
+            Caption = 'Статус';
+        }
+        field(15; "Wear Duration"; Enum "Lens Wear Duration")
+        {
+            Caption = 'Срок ношения';
+        }
+        field(16; "Created Date"; Date)
+        {
+            Caption = 'Дата создания';
+            Editable = false;
+        }
+        field(17; "Modified Date"; Date)
+        {
+            Caption = 'Дата изменения';
+            Editable = false;
+        }
+    }
+
+    keys
+    {
+        key(PK; "No.")
+        {
+            Clustered = true;
+        }
+        key(TypeMaterial; "Lens Type", "Material") { }
+    }
+
+    trigger OnInsert()
+    begin
+        Rec."Created Date" := Today();
+        Rec."Modified Date" := Today();
+    end;
+
+    trigger OnModify()
+    begin
+        Rec."Modified Date" := Today();
+    end;
+}
