@@ -1,0 +1,347 @@
+// ============================================================
+// Page 50100 - Lens Product List (Список продуктов)
+// ============================================================
+page 50100 "Lens Product List"
+{
+    Caption = 'Каталог глазных линз';
+    PageType = List;
+    SourceTable = "Lens Product";
+    ApplicationArea = All;
+    UsageCategory = Lists;
+    CardPageId = "Lens Product Card";
+    Editable = false;
+
+    layout
+    {
+        area(Content)
+        {
+            repeater(Products)
+            {
+                field("No."; Rec."No.") { ApplicationArea = All; }
+                field(Description; Rec.Description) { ApplicationArea = All; }
+                field("Lens Type"; Rec."Lens Type") { ApplicationArea = All; }
+                field(Material; Rec.Material) { ApplicationArea = All; }
+                field("Wear Duration"; Rec."Wear Duration") { ApplicationArea = All; }
+                field("Diameter (mm)"; Rec."Diameter (mm)") { ApplicationArea = All; }
+                field("Unit Price"; Rec."Unit Price") { ApplicationArea = All; }
+                field(Status; Rec.Status) { ApplicationArea = All; }
+            }
+        }
+    }
+
+    actions
+    {
+        area(Processing)
+        {
+            action(NewOrder)
+            {
+                Caption = 'Создать заказ';
+                Image = NewOrder;
+                ApplicationArea = All;
+                trigger OnAction()
+                var
+                    LensOrderCard: Page "Lens Order Card";
+                    LensOrder: Record "Lens Order";
+                begin
+                    LensOrder.Init();
+                    LensOrder."Lens Product No." := Rec."No.";
+                    LensOrder."Lens Description" := Rec.Description;
+                    LensOrder."Unit Price" := Rec."Unit Price";
+                    LensOrderCard.SetRecord(LensOrder);
+                    LensOrderCard.RunModal();
+                end;
+            }
+        }
+    }
+}
+
+// ============================================================
+// Page 50101 - Lens Product Card (Карточка линзы)
+// ============================================================
+page 50101 "Lens Product Card"
+{
+    Caption = 'Карточка линзы';
+    PageType = Card;
+    SourceTable = "Lens Product";
+    ApplicationArea = All;
+    UsageCategory = None;
+
+    layout
+    {
+        area(Content)
+        {
+            group(General)
+            {
+                Caption = 'Основное';
+                field("No."; Rec."No.") { ApplicationArea = All; }
+                field(Description; Rec.Description) { ApplicationArea = All; }
+                field("Lens Type"; Rec."Lens Type") { ApplicationArea = All; }
+                field(Material; Rec.Material) { ApplicationArea = All; }
+                field("Wear Duration"; Rec."Wear Duration") { ApplicationArea = All; }
+                field(Status; Rec.Status) { ApplicationArea = All; }
+                field("ISO Certification"; Rec."ISO Certification") { ApplicationArea = All; }
+            }
+            group(OpticalSpec)
+            {
+                Caption = 'Оптические характеристики';
+                field("Optical Power Min"; Rec."Optical Power Min") { ApplicationArea = All; }
+                field("Optical Power Max"; Rec."Optical Power Max") { ApplicationArea = All; }
+                field("Base Curve (mm)"; Rec."Base Curve (mm)") { ApplicationArea = All; }
+                field("Diameter (mm)"; Rec."Diameter (mm)") { ApplicationArea = All; }
+            }
+            group(MaterialSpec)
+            {
+                Caption = 'Материальные характеристики';
+                field("Water Content (%)"; Rec."Water Content (%)") { ApplicationArea = All; }
+                field("Oxygen Permeability (Dk)"; Rec."Oxygen Permeability (Dk)") { ApplicationArea = All; }
+                field("UV Protection"; Rec."UV Protection") { ApplicationArea = All; }
+            }
+            group(Pricing)
+            {
+                Caption = 'Ценообразование';
+                field("Unit Price"; Rec."Unit Price") { ApplicationArea = All; }
+            }
+        }
+        area(FactBoxes)
+        {
+            systempart(Notes; Notes) { ApplicationArea = All; }
+        }
+    }
+}
+
+// ============================================================
+// Page 50102 - Lens Order List
+// ============================================================
+page 50102 "Lens Order List"
+{
+    Caption = 'Заказы на линзы';
+    PageType = List;
+    SourceTable = "Lens Order";
+    ApplicationArea = All;
+    UsageCategory = Lists;
+    CardPageId = "Lens Order Card";
+    Editable = false;
+
+    layout
+    {
+        area(Content)
+        {
+            repeater(Orders)
+            {
+                field("No."; Rec."No.") { ApplicationArea = All; }
+                field("Customer Name"; Rec."Customer Name") { ApplicationArea = All; }
+                field("Lens Description"; Rec."Lens Description") { ApplicationArea = All; }
+                field("Optical Power (D)"; Rec."Optical Power (D)") { ApplicationArea = All; }
+                field(Eye; Rec.Eye) { ApplicationArea = All; }
+                field(Quantity; Rec.Quantity) { ApplicationArea = All; }
+                field("Total Amount"; Rec."Total Amount") { ApplicationArea = All; }
+                field("Order Date"; Rec."Order Date") { ApplicationArea = All; }
+                field(Status; Rec.Status)
+                {
+                    ApplicationArea = All;
+                    StyleExpr = StatusStyle;
+                }
+                field("Quality Check Passed"; Rec."Quality Check Passed") { ApplicationArea = All; }
+            }
+        }
+    }
+
+    var
+        StatusStyle: Text;
+
+    trigger OnAfterGetRecord()
+    begin
+        case Rec.Status of
+            Rec.Status::New:
+                StatusStyle := 'Ambiguous';
+            Rec.Status::"In Production":
+                StatusStyle := 'Favorable';
+            Rec.Status::"Quality Check":
+                StatusStyle := 'Attention';
+            Rec.Status::Ready:
+                StatusStyle := 'Favorable';
+            Rec.Status::Shipped:
+                StatusStyle := 'Strong';
+            Rec.Status::Cancelled:
+                StatusStyle := 'Unfavorable';
+        end;
+    end;
+
+    actions
+    {
+        area(Processing)
+        {
+            action(StartProduction)
+            {
+                Caption = 'Запустить в производство';
+                Image = Production;
+                ApplicationArea = All;
+                trigger OnAction()
+                var
+                    LensOrderMgt: Codeunit "Lens Order Mgt.";
+                begin
+                    LensOrderMgt.StartProduction(Rec);
+                end;
+            }
+            action(MarkShipped)
+            {
+                Caption = 'Отгружен';
+                Image = Ship;
+                ApplicationArea = All;
+                trigger OnAction()
+                var
+                    LensOrderMgt: Codeunit "Lens Order Mgt.";
+                begin
+                    LensOrderMgt.MarkAsShipped(Rec);
+                end;
+            }
+        }
+    }
+}
+
+// ============================================================
+// Page 50103 - Lens Order Card (Карточка заказа)
+// ============================================================
+page 50103 "Lens Order Card"
+{
+    Caption = 'Заказ на линзы';
+    PageType = Card;
+    SourceTable = "Lens Order";
+    ApplicationArea = All;
+    UsageCategory = None;
+
+    layout
+    {
+        area(Content)
+        {
+            group(General)
+            {
+                Caption = 'Основное';
+                field("No."; Rec."No.") { ApplicationArea = All; }
+                field("Customer No."; Rec."Customer No.") { ApplicationArea = All; }
+                field("Customer Name"; Rec."Customer Name") { ApplicationArea = All; Editable = false; }
+                field(Status; Rec.Status) { ApplicationArea = All; }
+                field("Order Date"; Rec."Order Date") { ApplicationArea = All; }
+                field("Requested Delivery Date"; Rec."Requested Delivery Date") { ApplicationArea = All; }
+                field("Doctor Prescription No."; Rec."Doctor Prescription No.") { ApplicationArea = All; }
+            }
+            group(LensSpec)
+            {
+                Caption = 'Параметры линзы';
+                field("Lens Product No."; Rec."Lens Product No.") { ApplicationArea = All; }
+                field("Lens Description"; Rec."Lens Description") { ApplicationArea = All; Editable = false; }
+                field("Optical Power (D)"; Rec."Optical Power (D)") { ApplicationArea = All; }
+                field("Cylinder (D)"; Rec."Cylinder (D)") { ApplicationArea = All; }
+                field("Axis (degrees)"; Rec."Axis (degrees)") { ApplicationArea = All; }
+                field(Eye; Rec.Eye) { ApplicationArea = All; }
+            }
+            group(Pricing)
+            {
+                Caption = 'Стоимость';
+                field(Quantity; Rec.Quantity) { ApplicationArea = All; }
+                field("Unit Price"; Rec."Unit Price") { ApplicationArea = All; }
+                field("Total Amount"; Rec."Total Amount") { ApplicationArea = All; Editable = false; Importance = Promoted; }
+            }
+            group(Production)
+            {
+                Caption = 'Производство';
+                field("Quality Check Passed"; Rec."Quality Check Passed") { ApplicationArea = All; }
+                field("Responsible Employee"; Rec."Responsible Employee") { ApplicationArea = All; }
+                field("Production Notes"; Rec."Production Notes") { ApplicationArea = All; MultiLine = true; }
+            }
+        }
+        area(FactBoxes)
+        {
+            systempart(Notes; Notes) { ApplicationArea = All; }
+        }
+    }
+
+    actions
+    {
+        area(Promoted)
+        {
+            actionref(StartProd_Promoted; StartProduction) { }
+            actionref(QC_Promoted; RunQualityCheck) { }
+        }
+        area(Processing)
+        {
+            action(StartProduction)
+            {
+                Caption = 'Запустить в производство';
+                Image = Production;
+                ApplicationArea = All;
+                Promoted = true;
+                PromotedCategory = Process;
+                trigger OnAction()
+                var
+                    LensOrderMgt: Codeunit "Lens Order Mgt.";
+                begin
+                    LensOrderMgt.StartProduction(Rec);
+                    CurrPage.Update();
+                end;
+            }
+            action(RunQualityCheck)
+            {
+                Caption = 'Контроль качества';
+                Image = Checklist;
+                ApplicationArea = All;
+                trigger OnAction()
+                var
+                    LensQCPage: Page "Lens Quality Check List";
+                    LensQC: Record "Lens Quality Check";
+                begin
+                    LensQC.SetRange("Order No.", Rec."No.");
+                    LensQCPage.SetTableView(LensQC);
+                    LensQCPage.RunModal();
+                    CurrPage.Update();
+                end;
+            }
+        }
+    }
+}
+
+// ============================================================
+// Page 50104 - Lens Quality Check List
+// ============================================================
+page 50104 "Lens Quality Check List"
+{
+    Caption = 'Контроль качества линз';
+    PageType = List;
+    SourceTable = "Lens Quality Check";
+    ApplicationArea = All;
+    UsageCategory = None;
+
+    layout
+    {
+        area(Content)
+        {
+            repeater(QCEntries)
+            {
+                field("Entry No."; Rec."Entry No.") { ApplicationArea = All; }
+                field("Order No."; Rec."Order No.") { ApplicationArea = All; }
+                field("Check Date"; Rec."Check Date") { ApplicationArea = All; }
+                field("Inspector Code"; Rec."Inspector Code") { ApplicationArea = All; }
+                field("Optical Power Measured (D)"; Rec."Optical Power Measured (D)") { ApplicationArea = All; }
+                field("Diameter Measured (mm)"; Rec."Diameter Measured (mm)") { ApplicationArea = All; }
+                field("Surface Defects"; Rec."Surface Defects") { ApplicationArea = All; }
+                field(Passed; Rec.Passed)
+                {
+                    ApplicationArea = All;
+                    StyleExpr = QCStyle;
+                }
+                field(Comments; Rec.Comments) { ApplicationArea = All; }
+            }
+        }
+    }
+
+    var
+        QCStyle: Text;
+
+    trigger OnAfterGetRecord()
+    begin
+        if Rec.Passed then
+            QCStyle := 'Favorable'
+        else
+            QCStyle := 'Unfavorable';
+    end;
+}
