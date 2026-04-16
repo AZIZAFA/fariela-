@@ -1,0 +1,204 @@
+// ============================================================
+// Codeunit 50100 - Lens Order Mgt. (Управление заказами)
+// ============================================================
+codeunit 50100 "Lens Order Mgt."
+{
+    Caption = 'Lens Order Management';
+
+    /// <summary>
+    /// Переводит заказ в статус "В производстве"
+    /// </summary>
+    procedure StartProduction(var LensOrder: Record "Lens Order")
+    begin
+        LensOrder.TestField("Lens Product No.");
+        LensOrder.TestField("Customer No.");
+        LensOrder.TestField("Optical Power (D)");
+
+        if LensOrder.Status <> LensOrder.Status::New then
+            Error('Заказ %1 уже находится в статусе: %2. Только новые заказы можно запустить в производство.',
+                LensOrder."No.", LensOrder.Status);
+
+        LensOrder.Status := LensOrder.Status::"In Production";
+        LensOrder.Modify(true);
+
+        Message('Заказ %1 запущен в производство.', LensOrder."No.");
+    end;
+
+    /// <summary>
+    /// Переводит заказ в статус контроля качества
+    /// </summary>
+    procedure SendToQualityCheck(var LensOrder: Record "Lens Order")
+    begin
+        if LensOrder.Status <> LensOrder.Status::"In Production" then
+            Error('Только заказы в производстве можно отправить на контроль качества.');
+
+        LensOrder.Status := LensOrder.Status::"Quality Check";
+        LensOrder.Modify(true);
+    end;
+
+    /// <summary>
+    /// Помечает заказ как готовый к отгрузке (после успешного QC)
+    /// </summary>
+    procedure MarkReadyForShipment(var LensOrder: Record "Lens Order")
+    begin
+        if LensOrder.Status <> LensOrder.Status::"Quality Check" then
+            Error('Заказ должен пройти контроль качества перед отгрузкой.');
+
+        if not LensOrder."Quality Check Passed" then
+            Error('Контроль качества для заказа %1 не пройден.', LensOrder."No.");
+
+        LensOrder.Status := LensOrder.Status::Ready;
+        LensOrder.Modify(true);
+    end;
+
+    /// <summary>
+    /// Отмечает заказ как отгруженный
+    /// </summary>
+    procedure MarkAsShipped(var LensOrder: Record "Lens Order")
+    begin
+        if LensOrder.Status <> LensOrder.Status::Ready then
+            Error('Только заказы со статусом "Готов к отгрузке" можно отгрузить.');
+
+        LensOrder.Status := LensOrder.Status::Shipped;
+        LensOrder.Modify(true);
+
+        Message('Заказ %1 успешно отгружен.', LensOrder."No.");
+    end;
+
+    /// <summary>
+    /// Отменяет заказ (только если ещё не отгружен)
+    /// </summary>
+    procedure CancelOrder(var LensOrder: Record "Lens Order")
+    begin
+        if LensOrder.Status = LensOrder.Status::Shipped then
+            Error('Отгруженный заказ %1 невозможно отменить.', LensOrder."No.");
+
+        if not Confirm('Вы уверены, что хотите отменить заказ %1?', false, LensOrder."No.") then
+            exit;
+
+        LensOrder.Status := LensOrder.Status::Cancelled;
+        LensOrder.Modify(true);
+    end;
+}
+
+// ============================================================
+// Codeunit 50101 - Lens Quality Check Mgt.
+// ============================================================
+codeunit 50101 "Lens Quality Check Mgt."
+{
+    Caption = 'Lens Quality Check Management';
+
+    /// <summary>
+    /// Создаёт запись контроля качества для заказа
+    /// </summary>
+    procedure CreateQualityCheck(
+        OrderNo: Code[20];
+        InspectorCode: Code[20];
+        PowerMeasured: Decimal;
+        DiameterMeasured: Decimal;
+        HasSurfaceDefects: Boolean;
+        Comments: Text[250]
+    )
+    var
+        LensQC: Record "Lens Quality Check";
+        LensOrder: Record "Lens Order";
+        LensOrderMgt: Codeunit "Lens Order Mgt.";
+        Passed: Boolean;
+        TolerancePower: Decimal;
+        ToleranceDiameter: Decimal;
+    begin
+        if not LensOrder.Get(OrderNo) then
+            Error('Заказ %1 не найден.', OrderNo);
+
+        // Допуски по умолчанию (настраивайте под стандарты ISO 18369)
+        TolerancePower := 0.12;
+        ToleranceDiameter := 0.20;
+
+        Passed := not HasSurfaceDefects;
+        if Passed then begin
+            // Проверяем допуск оптической силы
+            if Abs(PowerMeasured - LensOrder."Optical Power (D)") > TolerancePower then
+                Passed := false;
+        end;
+
+        LensQC.Init();
+        LensQC."Order No." := OrderNo;
+        LensQC."Check Date" := Today();
+        LensQC."Inspector Code" := InspectorCode;
+        LensQC."Optical Power Measured (D)" := PowerMeasured;
+        LensQC."Diameter Measured (mm)" := DiameterMeasured;
+        LensQC."Surface Defects" := HasSurfaceDefects;
+        LensQC.Passed := Passed;
+        LensQC.Comments := Comments;
+        LensQC.Insert(true);
+
+        // Обновляем заказ
+        LensOrder."Quality Check Passed" := Passed;
+        LensOrder.Modify(true);
+
+        if Passed then begin
+            LensOrderMgt.MarkReadyForShipment(LensOrder);
+            Message('Контроль качества пройден. Заказ %1 готов к отгрузке.', OrderNo);
+        end else
+            Message('Контроль качества НЕ пройден для заказа %1. Требуется повторное производство.', OrderNo);
+    end;
+}
+
+// ============================================================
+// Codeunit 50102 - Lens Pricing (Расчёт цен)
+// ============================================================
+codeunit 50102 "Lens Pricing"
+{
+    Caption = 'Lens Pricing';
+
+    /// <summary>
+    /// Рассчитывает цену линзы с учётом сложности рецепта
+    /// </summary>
+    procedure CalcPriceWithComplexity(
+        BasePrice: Decimal;
+        OpticalPower: Decimal;
+        CylinderPower: Decimal
+    ): Decimal
+    var
+        FinalPrice: Decimal;
+        ComplexityFactor: Decimal;
+    begin
+        FinalPrice := BasePrice;
+        ComplexityFactor := 1.0;
+
+        // Надбавка за высокую оптическую силу
+        if Abs(OpticalPower) > 6.0 then
+            ComplexityFactor += 0.15
+        else
+            if Abs(OpticalPower) > 3.0 then
+                ComplexityFactor += 0.08;
+
+        // Надбавка за торический рецепт
+        if Abs(CylinderPower) > 0 then
+            ComplexityFactor += 0.12;
+
+        // Надбавка за сильный астигматизм
+        if Abs(CylinderPower) > 2.0 then
+            ComplexityFactor += 0.10;
+
+        FinalPrice := BasePrice * ComplexityFactor;
+        exit(Round(FinalPrice, 0.01));
+    end;
+
+    /// <summary>
+    /// Возвращает скидку по объёму заказа
+    /// </summary>
+    procedure GetVolumeDiscount(Quantity: Decimal): Decimal
+    begin
+        case true of
+            Quantity >= 100:
+                exit(0.15);  // 15% скидка
+            Quantity >= 50:
+                exit(0.10);  // 10%
+            Quantity >= 20:
+                exit(0.05);  // 5%
+            else
+                exit(0);
+        end;
+    end;
+}
