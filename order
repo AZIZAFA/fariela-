@@ -1,0 +1,225 @@
+// ============================================================
+// Table 50101 - Lens Order (Заказы на линзы)
+// ============================================================
+table 50101 "Lens Order"
+{
+    Caption = 'Lens Order';
+    DataClassification = CustomerContent;
+    LookupPageId = "Lens Order List";
+    DrillDownPageId = "Lens Order List";
+
+    fields
+    {
+        field(1; "No."; Code[20])
+        {
+            Caption = 'Номер заказа';
+            NotBlank = true;
+        }
+        field(2; "Customer No."; Code[20])
+        {
+            Caption = 'Клиент';
+            TableRelation = Customer."No.";
+
+            trigger OnValidate()
+            var
+                Cust: Record Customer;
+            begin
+                if Cust.Get(Rec."Customer No.") then
+                    Rec."Customer Name" := Cust.Name;
+            end;
+        }
+        field(3; "Customer Name"; Text[100])
+        {
+            Caption = 'Имя клиента';
+            Editable = false;
+        }
+        field(4; "Lens Product No."; Code[20])
+        {
+            Caption = 'Линза';
+            TableRelation = "Lens Product"."No.";
+
+            trigger OnValidate()
+            var
+                LensProd: Record "Lens Product";
+            begin
+                if LensProd.Get(Rec."Lens Product No.") then begin
+                    Rec."Lens Description" := LensProd.Description;
+                    Rec."Unit Price" := LensProd."Unit Price";
+                    CalcTotalAmount();
+                end;
+            end;
+        }
+        field(5; "Lens Description"; Text[100])
+        {
+            Caption = 'Описание линзы';
+            Editable = false;
+        }
+        field(6; "Optical Power (D)"; Decimal)
+        {
+            Caption = 'Оптическая сила (D)';
+            DecimalPlaces = 2 : 2;
+        }
+        field(7; "Cylinder (D)"; Decimal)
+        {
+            Caption = 'Цилиндр (D)';
+            DecimalPlaces = 2 : 2;
+        }
+        field(8; "Axis (degrees)"; Integer)
+        {
+            Caption = 'Ось (градусы)';
+            MaxValue = 180;
+            MinValue = 0;
+        }
+        field(9; "Eye"; Option)
+        {
+            Caption = 'Глаз';
+            OptionMembers = " ","OD (правый)","OS (левый)","OU (оба)";
+            OptionCaption = ' ,OD (правый),OS (левый),OU (оба)';
+        }
+        field(10; "Quantity"; Decimal)
+        {
+            Caption = 'Количество';
+            DecimalPlaces = 0 : 0;
+            MinValue = 1;
+            InitValue = 1;
+
+            trigger OnValidate()
+            begin
+                CalcTotalAmount();
+            end;
+        }
+        field(11; "Unit Price"; Decimal)
+        {
+            Caption = 'Цена за ед.';
+            DecimalPlaces = 2 : 2;
+
+            trigger OnValidate()
+            begin
+                CalcTotalAmount();
+            end;
+        }
+        field(12; "Total Amount"; Decimal)
+        {
+            Caption = 'Итого';
+            DecimalPlaces = 2 : 2;
+            Editable = false;
+        }
+        field(13; "Order Date"; Date)
+        {
+            Caption = 'Дата заказа';
+        }
+        field(14; "Requested Delivery Date"; Date)
+        {
+            Caption = 'Желаемая дата поставки';
+        }
+        field(15; "Status"; Enum "Lens Order Status")
+        {
+            Caption = 'Статус заказа';
+        }
+        field(16; "Doctor Prescription No."; Code[30])
+        {
+            Caption = 'Номер рецепта врача';
+        }
+        field(17; "Quality Check Passed"; Boolean)
+        {
+            Caption = 'Контроль качества пройден';
+        }
+        field(18; "Production Notes"; Text[250])
+        {
+            Caption = 'Примечания производства';
+        }
+        field(19; "Responsible Employee"; Code[20])
+        {
+            Caption = 'Ответственный сотрудник';
+            TableRelation = Employee."No.";
+        }
+    }
+
+    keys
+    {
+        key(PK; "No.")
+        {
+            Clustered = true;
+        }
+        key(Customer; "Customer No.", "Order Date") { }
+        key(Status; "Status") { }
+    }
+
+    trigger OnInsert()
+    begin
+        if Rec."Order Date" = 0D then
+            Rec."Order Date" := Today();
+        Rec.Status := Rec.Status::New;
+    end;
+
+    local procedure CalcTotalAmount()
+    begin
+        Rec."Total Amount" := Rec.Quantity * Rec."Unit Price";
+    end;
+}
+
+// ============================================================
+// Table 50102 - Lens Quality Control (Контроль качества)
+// ============================================================
+table 50102 "Lens Quality Check"
+{
+    Caption = 'Lens Quality Check';
+    DataClassification = CustomerContent;
+
+    fields
+    {
+        field(1; "Entry No."; Integer)
+        {
+            Caption = 'Запись №';
+            AutoIncrement = true;
+        }
+        field(2; "Order No."; Code[20])
+        {
+            Caption = 'Номер заказа';
+            TableRelation = "Lens Order"."No.";
+        }
+        field(3; "Check Date"; Date)
+        {
+            Caption = 'Дата проверки';
+        }
+        field(4; "Inspector Code"; Code[20])
+        {
+            Caption = 'Код инспектора';
+            TableRelation = Employee."No.";
+        }
+        field(5; "Optical Power Measured (D)"; Decimal)
+        {
+            Caption = 'Измеренная оптическая сила (D)';
+            DecimalPlaces = 2 : 2;
+        }
+        field(6; "Diameter Measured (mm)"; Decimal)
+        {
+            Caption = 'Измеренный диаметр (мм)';
+            DecimalPlaces = 2 : 2;
+        }
+        field(7; "Surface Defects"; Boolean)
+        {
+            Caption = 'Дефекты поверхности';
+        }
+        field(8; "Passed"; Boolean)
+        {
+            Caption = 'Прошёл проверку';
+        }
+        field(9; "Comments"; Text[250])
+        {
+            Caption = 'Комментарий';
+        }
+    }
+
+    keys
+    {
+        key(PK; "Entry No.") { Clustered = true; }
+        key(Order; "Order No.", "Check Date") { }
+    }
+
+    trigger OnInsert()
+    begin
+        if Rec."Check Date" = 0D then
+            Rec."Check Date" := Today();
+    end;
+}
